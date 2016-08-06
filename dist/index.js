@@ -1,83 +1,90 @@
 'use strict';
 
-Object.defineProperty(exports, '__esModule', { value: true });
-
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var concat = _interopDefault(require('unique-concat'));
-var glob = require('glob');
+var resolve = _interopDefault(require('resolve'));
 var path = _interopDefault(require('path'));
 
-var PackageImporter = function PackageImporter () {};
+var PackageImporter = function PackageImporter(options) {
+  if ( options === void 0 ) options = {};
 
-PackageImporter.resolveSync = function resolveSync (
-  url,
-  includePaths
-) {
-    if ( includePaths === void 0 ) includePaths = [process.cwd()];
-
-  // if (glob.hasMagic(url)) {
-  // const absolutePaths = includePaths.reduce((absolutePathStore, includePath) => {
-  //   // Try to resolve the glob pattern.
-  //   const newAbsolutePaths = glob
-  //     .sync(url, { cwd: includePath })
-  //     .map(relativePath => `@import '${path.resolve(includePath, relativePath)}';`);
-  //   // Merge new paths with previously found ones.
-  //   return concat(absolutePathStore, newAbsolutePaths);
-  // }, []);
-  // if (absolutePaths.length) {
-  //   return { contents: absolutePaths.join('\n') };
-  // }
-  // }
-  return null;
+  var defaultOptions = {
+    cwd: process.cwd(),
+    extensions: [
+      '.scss',
+      '.sass'
+    ],
+    packageKeys: [
+      'sass',
+      'scss',
+      'style',
+      'css',
+      'main.sass',
+      'main.scss',
+      'main.style',
+      'main.css',
+      'main'
+    ]
+  };
+  this.options = Object.assign(defaultOptions, options);
 };
 
-PackageImporter.resolve = function resolve (
-  url,
-  includePaths
-) {
-    if ( includePaths === void 0 ) includePaths = [process.cwd()];
+PackageImporter.prototype.resolveSync = function resolveSync (url) {
+    var this$1 = this;
+
+  // Remove tilde symbol from the beginning
+  // of urls (except home "~/" directory).
+  var re = new RegExp(("^~(?!" + (path.sep) + ")"));
+  var cleanUrl = url.replace(re, '');
+  // Create url variants for partial file matching (e.g. _file.scss).
+  var parsedUrl = path.parse(cleanUrl);
+  var urlVariants = [cleanUrl];
+  var data = null;
+  if (parsedUrl.dir && !parsedUrl.ext) {
+    urlVariants = this.options.extensions.reduce(function (x, extension) {
+      x.push(path.join(parsedUrl.dir, ("" + (parsedUrl.name) + extension)));
+      x.push(path.join(parsedUrl.dir, ("_" + (parsedUrl.name) + extension)));
+      return x;
+    }, urlVariants);
+  }
+  // Find a url variant that can be resolved.
+  urlVariants.some(function (urlVariant) {
+    try {
+      var resolvedPath = resolve.sync(urlVariant, {
+        basedir: this$1.options.cwd,
+        packageFilter: function (pkg) {
+          var newPkg = pkg;
+          var pkgKey = this$1.options.packageKeys.find(function (x) { return pkg[x] !== 'undefined'; });
+          newPkg.main = pkg[pkgKey];
+          return newPkg;
+        }
+      });
+      if (resolvedPath) {
+        data = {
+          file: resolvedPath
+        };
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  });
+  return data;
+};
+
+PackageImporter.prototype.resolve = function resolve$1 (url) {
+    var this$1 = this;
 
   return new Promise(function (promiseResolve) {
-    promiseResolve(PackageImporter.resolveSync(url, includePaths));
+    promiseResolve(this$1.resolveSync(url));
   });
 };
 
-PackageImporter.importer = function importer (directories, packageKeys) {
-  return function nodeSassImporter(url, prev, done) {
-    var importer = this;
-    // Create a set of all paths to search for files.
-    var includePaths = [];
-    if (path.isAbsolute(prev)) {
-      includePaths.push(path.dirname(prev));
-    }
-    includePaths = concat(includePaths, importer.options.includePaths.split(path.delimiter));
-    // Try to resolve the url.
-    PackageImporter.resolve(url, includePaths).then(function (data) {
-      done(data);
-    });
-  };
-};
+var packageImporter = new PackageImporter();
+function index (url, prev, done) {
+  if (this.options.packageImporter) {
+    packageImporter.options = Object.assign(packageImporter.options, this.options.packageImporter);
+  }
+  packageImporter.resolve(url).then(function (data) { return done(data); });
+}
 
-var defaultDirectories = ['node_modules', 'bower_components'];
-var defaultPackageKeys = [
-  'sass',
-  'scss',
-  'style',
-  'css',
-  'main.sass',
-  'main.scss',
-  'main.style',
-  'main.css',
-  'main'
-];
-
-function index (directories, packageKeys) {
-    if ( directories === void 0 ) directories = defaultDirectories;
-    if ( packageKeys === void 0 ) packageKeys = defaultPackageKeys;
-
-    return PackageImporter.importer(directories, packageKeys);
-};
-
-exports.PackageImporter = PackageImporter;
-exports['default'] = index;
+module.exports = index;
