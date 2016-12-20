@@ -25,17 +25,24 @@ export default class PackageImporter {
         `main.style`,
         `main.css`,
         `main`
-      ]
+      ],
+      prefix: `~`
     };
     /**
      * @type {Object}
      */
     this.options = Object.assign({}, defaultOptions, options);
+
     /**
-     * Match tilde symbol at the beginning of urls (except posix home "~/" directory).
+     * Ensure any regex characters entered are escaped.
+     */
+    this.options.prefix = this.options.prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, `\\$&`);
+
+    /**
+     * Match given prefix symbol at the beginning of urls (except posix home "~/" directory).
      * @type {RegExp}
      */
-    this.matchPackageUrl = new RegExp(`^~(?!/)`);
+    this.matchPackageUrl = new RegExp(`^${this.options.prefix}(?!/)`);
   }
 
   /**

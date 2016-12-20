@@ -27,22 +27,29 @@ var PackageImporter = function PackageImporter(options) {
       "main.style",
       "main.css",
       "main"
-    ]
+    ],
+    prefix: "~"
   };
   /**
    * @type {Object}
    */
   this.options = Object.assign({}, defaultOptions, options);
+
   /**
-   * Match tilde symbol at the beginning of urls (except posix home "~/" directory).
+   * Ensure any regex characters entered are escaped.
+   */
+  this.options.prefix = this.options.prefix.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+
+  /**
+   * Match given prefix symbol at the beginning of urls (except posix home "~/" directory).
    * @type {RegExp}
    */
-  this.matchPackageUrl = new RegExp("^~(?!/)");
+  this.matchPackageUrl = new RegExp(("^" + (this.options.prefix) + "(?!/)"));
 };
 
 /**
  * Synchronously resolve the path to a node-sass import url.
- * @param {string} url - Import url from node-sass.
+   * @param {string} url - Import url from node-sass.
  * @return {Object|null} Importer object or null.
  */
 PackageImporter.prototype.resolveSync = function resolveSync (url) {
