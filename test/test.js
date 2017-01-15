@@ -1,7 +1,5 @@
 /* eslint-env node, mocha */
 /* eslint-disable no-console */
-const chai = require(`chai`);
-const chaiAsPromised = require(`chai-as-promised`);
 const expect = require(`chai`).expect;
 const fs = require(`fs`);
 const sass = require(`node-sass`);
@@ -9,8 +7,6 @@ const path = require(`path`);
 
 const packageImporter = require(`../`);
 const PackageImporterClass = require(`../dist/PackageImporter.js`);
-
-chai.use(chaiAsPromised);
 
 /** @test {index} */
 describe(`packageImporter`, () => {
@@ -24,12 +20,9 @@ describe(`packageImporter`, () => {
       file: `test/files/module.scss`,
       importer: packageImporter()
     }, (error, result) => {
-      if (!error) {
-        expect(result.css.toString()).to.equal(expectedResult);
-        done();
-      } else {
-        console.log(error);
-      }
+      if (error) throw error;
+      expect(result.css.toString()).to.equal(expectedResult);
+      done();
     });
   });
 
@@ -53,24 +46,14 @@ describe(`PackageImporter`, () => {
   describe(`resolveSync()`, () => {
     it(`should be a function`, () => {
       const packageImporterInstance = new PackageImporterClass();
-      return expect(packageImporterInstance.resolveSync).to.be.a(`function`);
-    });
-  });
-
-  /** @test {PackageImporter#resolve} */
-  describe(`resolve()`, () => {
-    it(`should be a function`, () => {
-      const packageImporterInstance = new PackageImporterClass();
-      return expect(packageImporterInstance.resolve).to.be.a(`function`);
+      expect(packageImporterInstance.resolveSync).to.be.a(`function`);
     });
 
     it(`should return null`, () => {
       const packageImporterInstance = new PackageImporterClass();
       const url = `path/that/does/not/exist.scss`;
       const expectedResult = null;
-      return expect(packageImporterInstance.resolve(url))
-        .to.eventually.equal(expectedResult)
-        .notify();
+      expect(packageImporterInstance.resolveSync(url)).to.equal(expectedResult);
     });
 
     it(`should return null`, () => {
@@ -78,9 +61,7 @@ describe(`PackageImporter`, () => {
       const packageImporterInstance = new PackageImporterClass(options);
       const url = `test-module`;
       const expectedResult = null;
-      return expect(packageImporterInstance.resolve(url))
-        .to.eventually.equal(expectedResult)
-        .notify();
+      expect(packageImporterInstance.resolveSync(url)).to.equal(expectedResult);
     });
 
     it(`should return import object containing the test-module main sass file`, () => {
@@ -92,9 +73,7 @@ describe(`PackageImporter`, () => {
         `node_modules/test-module/scss/style.scss`
       )}`;
       const expectedResult = { file };
-      return expect(packageImporterInstance.resolve(url))
-        .to.eventually.deep.equal(expectedResult)
-        .notify();
+      expect(packageImporterInstance.resolveSync(url)).to.deep.equal(expectedResult);
     });
 
     it(`should return import object containing the test-module partial file`, () => {
@@ -106,9 +85,15 @@ describe(`PackageImporter`, () => {
         `node_modules/test-module/scss/_partial.scss`
       )}`;
       const expectedResult = { file };
-      return expect(packageImporterInstance.resolve(url))
-        .to.eventually.deep.equal(expectedResult)
-        .notify();
+      expect(packageImporterInstance.resolveSync(url)).to.deep.equal(expectedResult);
+    });
+  });
+
+  /** @test {PackageImporter#resolve} */
+  describe(`resolve()`, () => {
+    it(`should be a function`, () => {
+      const packageImporterInstance = new PackageImporterClass();
+      expect(packageImporterInstance.resolve).to.be.a(`function`);
     });
   });
 
@@ -116,28 +101,28 @@ describe(`PackageImporter`, () => {
   describe(`cleanUrl()`, () => {
     it(`should be a function`, () => {
       const packageImporterInstance = new PackageImporterClass();
-      return expect(packageImporterInstance.cleanUrl).to.be.a(`function`);
+      expect(packageImporterInstance.cleanUrl).to.be.a(`function`);
     });
 
     it(`should return the url unmodified`, () => {
       const packageImporterInstance = new PackageImporterClass();
       const url = `normal/path/without/tilde`;
       const expectedResult = url;
-      return expect(packageImporterInstance.cleanUrl(url)).to.equal(expectedResult);
+      expect(packageImporterInstance.cleanUrl(url)).to.equal(expectedResult);
     });
 
     it(`should return the unmodified home path relative url`, () => {
       const packageImporterInstance = new PackageImporterClass();
       const url = `~/home/path/with/tilde`;
       const expectedResult = url;
-      return expect(packageImporterInstance.cleanUrl(url)).to.equal(expectedResult);
+      expect(packageImporterInstance.cleanUrl(url)).to.equal(expectedResult);
     });
 
     it(`should return a cleaned up url without tilde`, () => {
       const packageImporterInstance = new PackageImporterClass();
       const url = `~path/with/tilde`;
       const expectedResult = `path/with/tilde`;
-      return expect(packageImporterInstance.cleanUrl(url)).to.equal(expectedResult);
+      expect(packageImporterInstance.cleanUrl(url)).to.equal(expectedResult);
     });
   });
 
@@ -145,21 +130,21 @@ describe(`PackageImporter`, () => {
   describe(`urlVariants()`, () => {
     it(`should be a function`, () => {
       const packageImporterInstance = new PackageImporterClass();
-      return expect(packageImporterInstance.urlVariants).to.be.a(`function`);
+      expect(packageImporterInstance.urlVariants).to.be.a(`function`);
     });
 
     it(`should return array with single url (module name)`, () => {
       const packageImporterInstance = new PackageImporterClass();
       const url = `module-name-url`;
       const expectedResult = [url];
-      return expect(packageImporterInstance.urlVariants(url)).to.deep.equal(expectedResult);
+      expect(packageImporterInstance.urlVariants(url)).to.deep.equal(expectedResult);
     });
 
     it(`should return array with single url (specific file)`, () => {
       const packageImporterInstance = new PackageImporterClass();
       const url = `module-name/specific/file.scss`;
       const expectedResult = [url];
-      return expect(packageImporterInstance.urlVariants(url)).to.deep.equal(expectedResult);
+      expect(packageImporterInstance.urlVariants(url)).to.deep.equal(expectedResult);
     });
 
     it(`should return array with partial file naming variants and extensions`, () => {
@@ -172,7 +157,7 @@ describe(`PackageImporter`, () => {
         path.join(`module-name`, `partial`, `file.sass`),
         path.join(`module-name`, `partial`, `_file.sass`)
       ];
-      return expect(packageImporterInstance.urlVariants(url)).to.deep.equal(expectedResult);
+      expect(packageImporterInstance.urlVariants(url)).to.deep.equal(expectedResult);
     });
   });
 
@@ -180,7 +165,7 @@ describe(`PackageImporter`, () => {
   describe(`resolveFilter()`, () => {
     it(`should be a function`, () => {
       const packageImporterInstance = new PackageImporterClass();
-      return expect(packageImporterInstance.resolveFilter).to.be.a(`function`);
+      expect(packageImporterInstance.resolveFilter).to.be.a(`function`);
     });
 
     it(`should return package object with value from \`sass\` as value for \`main\``, () => {
@@ -195,7 +180,7 @@ describe(`PackageImporter`, () => {
         sass: `sass.scss`,
         scss: `scss.scss`
       };
-      return expect(packageImporterInstance.resolveFilter(pkg)).to.deep.equal(expectedResult);
+      expect(packageImporterInstance.resolveFilter(pkg)).to.deep.equal(expectedResult);
     });
 
     it(`should return package object with value from \`scss\` as value for \`main\``, () => {
@@ -208,7 +193,7 @@ describe(`PackageImporter`, () => {
         main: `scss.scss`,
         scss: `scss.scss`
       };
-      return expect(packageImporterInstance.resolveFilter(pkg)).to.deep.equal(expectedResult);
+      expect(packageImporterInstance.resolveFilter(pkg)).to.deep.equal(expectedResult);
     });
   });
 });
